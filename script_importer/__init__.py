@@ -10,7 +10,6 @@ import os
 path = os.environ.get("SCRIPT_IMPORTER_PATH", "").split(";")
 # remove empty strings
 path = [s for s in path if s.strip() != ""]
-# SCRIPT_PATH = [r"D:\yueheng6\Documents", r"D:\yueheng6\Desktop\Project - 商分\18 modular"]
 from pathlib import Path
 
 
@@ -42,15 +41,26 @@ def get_version(fname, ver):
     if fin is not None:
         from .scriptrepo import ScriptRepo
         from pathlib import Path
-
-        sr = ScriptRepo(Path(fin).parent)
-        if ver == "latest":
-            date = None
+        try:
+            sr = ScriptRepo(Path(fin).parent)
+        except ValueError:
+            sr = None
+        if sr is None:
+            # script not in a git repo
+            if ver != 'latest':
+                raise ValueError(f"The requested script is not in a git repo,"
+                " you can ONLY use the latest version. E.g., 'import script_repo.<not_in_a_repo_script>.latest'."
+                f" More information: located script path = '{fin}', requested version: '{ver}'")
+            return get_script_content(fin)
         else:
-            # ver is like "v123", get the "123" part after "v"
-            date = ver[1:]
-        code = sr.read_script("./" + fin.stem + ".py", date=date)
-        return code
+            # script is in a git repo
+            if ver == "latest":
+                date = None
+            else:
+                # ver is like "v123", get the "123" part after "v"
+                date = ver[1:]
+            code = sr.read_script("./" + fin.stem + ".py", date=date)
+            return code
 
 
 class ScriptImporter:
@@ -76,11 +86,6 @@ class ScriptImporter:
             elif len(parts) == 2:
                 # no version specified, use the latest version
                 return importlib.util.spec_from_loader(name, loader=cls(""))
-                raise ValueError(
-                    "No version specified."
-                    " To use the latest (current on disk) version, use 'import script_importer.[fname].latest'"
-                    " If you want to import the version from a specific commit, use 'import script_importer.[fname].v[date]'."
-                )
 
             elif len(parts) == 3:
                 # the version part either starts with v or is latest, otherwise the third part is not a version
