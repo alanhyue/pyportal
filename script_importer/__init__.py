@@ -41,17 +41,20 @@ def get_version(fname, ver):
     if fin is not None:
         from .scriptrepo import ScriptRepo
         from pathlib import Path
+
         try:
             sr = ScriptRepo(Path(fin).parent)
         except ValueError:
             sr = None
         if sr is None:
             # script not in a git repo
-            if ver != 'latest':
-                raise ValueError(f"The requested script is not in a git repo,"
-                " you can ONLY use the latest version. E.g., 'import script_repo.<not_in_a_repo_script>.latest'."
-                f" More information: located script path = '{fin}', requested version: '{ver}'")
-            return get_script_content(fin)
+            if ver != "latest":
+                raise ValueError(
+                    f"The requested script is not in a git repo,"
+                    " you can ONLY use the latest version. E.g., 'import script_repo.<not_in_a_repo_script>.latest'."
+                    f" More information: located script path = '{fin}', requested version: '{ver}'"
+                )
+            return fin.read_text(encoding="utf8")
         else:
             # script is in a git repo
             if ver == "latest":
