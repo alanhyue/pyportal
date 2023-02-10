@@ -29,6 +29,21 @@ def get_script(fname):
         f"No script named {fname}.py found. Please make sure the script exists under {path=}"
     )
 
+def read_file_text(sr, fname):
+    # file from last commit
+    lc = sr.logs()[0]
+    lc_text = sr.read_script_in_commit(lc["commit"], fname)
+    # text on disk
+    text = (Path(sr.repo) / fname).read_text(encoding="utf8")
+    if text == lc_text:
+        print('Reading file "%s" from the last commit (%s)' % (fname, lc["date"]))
+    else:
+        print(
+            'Reading file on disk. Note, file "%s" has uncommitted changes. Last commit is %s' % (fname, lc["date"])
+        )
+    return text
+
+
 
 def get_script_content(fname):
     fin = get_script(fname)
@@ -57,12 +72,15 @@ def get_version(fname, ver):
             return fin.read_text(encoding="utf8")
         else:
             # script is in a git repo
-            if ver == "latest":
+            fpath_relative = "./" + fin.stem + ".py"
+            if ver == "file":
+                return read_file_text(sr, fpath_relative)
+            elif ver == "latest":
                 date = None
             else:
                 # ver is like "v123", get the "123" part after "v"
                 date = ver[1:]
-            code = sr.read_script("./" + fin.stem + ".py", date=date)
+            code = sr.read_script(fpath_relative, date=date)
             return code
 
 
@@ -92,7 +110,7 @@ class ScriptImporter:
 
             elif len(parts) == 3:
                 # the version part either starts with v or is latest, otherwise the third part is not a version
-                if parts[2].startswith("v") or parts[2] == "latest":
+                if parts[2].startswith("v") or parts[2] in ("latest", "file"):
                     fname, ver = parts[1], parts[2]
                     src = get_version(fname, ver)
                 else:
