@@ -26,8 +26,9 @@ def get_script(fname):
             return p
     # no script found
     raise ValueError(
-        f"No script named {fname}.py found. Please make sure the script exists under {path=}"
+        f"No script named {fname}.py found. Please make sure the script exists under {path}"
     )
+
 
 def read_file_text(sr, fname):
     # file from last commit
@@ -39,10 +40,10 @@ def read_file_text(sr, fname):
         print('Reading file "%s" from the last commit (%s)' % (fname, lc["date"]))
     else:
         print(
-            'Reading file on disk. Note, file "%s" has uncommitted changes. Last commit is %s' % (fname, lc["date"])
+            'Reading file on disk. Note, file "%s" has uncommitted changes. Last commit is %s'
+            % (fname, lc["date"])
         )
     return text
-
 
 
 def get_script_content(fname):
@@ -91,7 +92,7 @@ class ScriptImporter:
     @classmethod
     def find_spec(cls, name, path, target=None):
         if DEBUG and name.startswith(PACKAGE_NAME):
-            print(f"{name=} {path=} {target=}")
+            print(f"name={name} fpath={path} target={target}")
         if name == PACKAGE_NAME:
             # handle top level import with an empty module so no exception is raised
             return importlib.util.spec_from_loader(name, loader=cls(""))
