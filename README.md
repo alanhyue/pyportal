@@ -1,52 +1,127 @@
-# script importer
+# script_importer
 
-> Import from any version of python scripts.
+**Dependable Imports for Your Ever-Changing Scripts.**
 
 
-You have a script of frequently used functions, but you don't feel comfortable importing the script because you modify it frequently and that breaks dependencies. If this is you, worry no more. In new projects, just use `script_importer` to lock dependency on a specific version of your script, and no future changes will break it!
+Working with constantly-changing Python scripts poses a unique challenge: how do you maintain reliable imports? The answer is `script_importer`. This innovative tool enables you to **lock in** on a specific version of your script, ensuring that future changes won't disrupt your dependencies. With `script_importer`, you're free to innovate and iterate your scripts while keeping other projects stable and dependable.
 
-# Use script_importer
 
-The following short example demonstrates how to import functions from any version of a python script.
+## Examples
 
-Say you have a script file `myutils.py` that contains a `say_hello` function defined as below
+**Example 1: Simple Import**  You can use `script_importer` to import the latest version of the `say_hello` function from `myutils.py`. This will always import `say_hello` from the most recent commit (as the suffix `.latest` suggests).
 
-__myutils.py__
-
-```
+```python
+# This is your original script file `myutils.py`
 def say_hello():
     print('hello')
-```
 
-You happily used it in another place:
-
-```
-# line 1
+# Now you want to use it in another place:
 import script_importer
-# line 2
-from script_importer.myutils.latest import my_func
-# line 3
-my_func()
-# prints: hello
+from script_importer.myutils.latest import say_hello
+
+# Using the function
+say_hello()  # prints: hello
 ```
 
-Now you have dependency in this code. Future changes to `say_hello` will break it. With `script_importer`, you lock the import on the specific version (identified by the yyyymmddHHMMSS of the commit). You can make whatever changes to your script and dependency will never be an issue again:
+**Example 2: Version-specific Import** With the `.v` suffix, `script_importer` can import a specific version of a function. Even though `myutils.py` has been modified, you can still access the old version of `say_hello` thanks to `script_importer`.
 
-```
+```python
+# Assume that you have modified `myutils.py` and it now looks like this:
+def say_hello():
+    print('hello, world!')
+
+# But you still want the old version in another place:
 import script_importer
-# specify a version to import from
-from script_importer.myutils.v20230103192241 import my_func
-my_func()
-# prints: hello
+
+# v20230103192241 is a version identifier, 'v' followed by the datetime of the specific git commit
+from script_importer.myutils.v20230103192241 import say_hello
+
+# Using the function
+say_hello()  # prints: hello
 ```
 
-# install
+**Example 3: Managing Multiple Script Versions** `script_importer` allows you to manage and use multiple versions of a script within the same project. By importing different versions of the `say_hello` function under different names, you can use the version that suits your needs in each part of your project.
 
-This is not yet published to pypi.
+```python
+# Assume that you have multiple versions of `myutils.py` and you want to use different versions in different places:
+import script_importer
 
-You can install it by git cloning the repo and run the following command in the cloned folder to install the package locally:
+# Importing the latest version
+from script_importer.myutils.latest import say_hello as latest_hello
+latest_hello()  # prints: hello, world!
 
-`pip install -e .`
+# Importing a specific version, again using the datetime of the commit as the version identifier
+from script_importer.myutils.v20230103192241 import say_hello as old_hello
+old_hello()  # prints: hello
+```
 
-# Behind the wheels - how set script folders
-You need to tell script_importer which folders to look up for scripts. You can set the folders globally in the SCRIPT_IMPORTER_PATH=C:\myscripts;C:\Document\PythonScripts variable, (separate multiple folders by a semicolon), or just the current context by setting `script_importer.path=[path1, path2, ...]`.
+
+**Example 4: Importing Like Standard Python Imports** With the `.file` suffix, you can import whatever is currently in the script file with `script_importer`. It works just like the standard Python import. This is particularly useful for testing out your scripts. But be aware, you must commit your changes to be able to lock in on them, as shown in Example 2.
+
+```python
+# Assume that you have multiple versions of `myutils.py` and you want to use different versions in different places:
+import script_importer
+
+# Importing the latest version
+from script_importer.myutils.file import say_hello as latest_hello
+latest_hello()  # prints: hello, world!
+
+# Importing a specific version, again using the datetime of the commit as the version identifier
+from script_importer.myutils.v20230103192241 import say_hello as old_hello
+old_hello()  # prints: hello
+```
+
+# Install
+
+```
+pip install script_importer
+```
+
+
+#
+
+**Import syntax**
+
+You must import the `script_importer` package first. Then you can import a specific version of a script.
+
+```python
+# Import the package first
+import script_importer
+
+# Import from script myutil.py
+from script_importer.myutil.latest import foo
+# OR import the whole script
+import script_importer.myutil.latest as Util
+# OR import everything
+from script_importer.myutil.latest import *
+```
+
+Package statement follows the syntax `script_importer.<name_of_scriptfile>.<version>` (e.g., `script_importer.myutil.latest`). It always have three components, separated by dots.
+
+1. `script_importer`. The name of the pacakge, always the same.
+2. `<name_of_scriptfile>`. The file name of your script, *no space allowed*. `script_importer` searches in order of specified folders (see the setup guide below), and returns the first result. Try not to have scripts under the same name.
+3. `<version>`. Specify the version of the script to import from. Can be one of
+   1. `file`. Import the file on disk just like the standard Python import.
+   2. `vyyyymmddHHMMSS`. Import a specific version to lock in. It is a `v` followed by the datetime of the git commit in yyyymmddHHMMSS (year month day hour minutes seconds) format.
+   3. `latest` Import the script from the latest commit. Automatically prints out the `vyyyymmddHHMMSS` information for you to lock in.
+
+
+**Setup script folders**
+
+Working like Python imports, `script_importer` searches for the requested script by its file name in the given folders. You can set the folders globally in the environment variable `SCRIPT_IMPORTER_PATH`. For example, we add a folder under C drive named `my scripts`, and another folder named `PythonScripts` under our Documents folder. In all OS systems, you need to separate multiple folders by a `semicolon`. Note that order of folders matters. If you have two script files with the same name, the one appeared first in the folders will be used.
+
+```cmd
+SCRIPT_IMPORTER_PATH=C:\my scripts;C:\Document\PythonScripts
+```
+
+You can also modify the path `script_importer` searches by manipulating its `path` attribute:
+
+```python
+import script_importer
+# modify the path list and add a new folder to search for scripts
+script_importer.path.append('D:/new script')
+# import a constant from a script located at D:/new script/foo.py
+from script_importer.foo.file import pi
+print(pi) 
+# prints 3.14
+```
