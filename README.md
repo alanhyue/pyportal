@@ -1,9 +1,9 @@
-# script_importer
+# Script Importer
 
 **Dependable Imports for Your Ever-Changing Scripts.**
 
 
-Working with constantly-changing Python scripts poses a unique challenge: how do you maintain reliable imports? The answer is `script_importer`. This innovative tool enables you to **lock in** on a specific version of your script, ensuring that future changes won't disrupt your dependencies. With `script_importer`, you're free to innovate and iterate your scripts while keeping other projects stable and dependable.
+Working with constantly changing Python scripts poses a unique challenge: how do you maintain reliable imports? The answer is `script_importer`. This innovative tool enables you to **lock in** on a specific version of your script, ensuring that future changes won't disrupt your dependencies. With `script_importer`, you're free to innovate and iterate your scripts while keeping other projects stable and dependable.
 
 
 ## Examples
@@ -71,14 +71,13 @@ from script_importer.myutils.v20230103192241 import say_hello as old_hello
 old_hello()  # prints: hello
 ```
 
-# Install
+## How to use
+
+**Install the package**
 
 ```
 pip install script_importer
 ```
-
-
-#
 
 **Import syntax**
 
@@ -96,9 +95,9 @@ import script_importer.myutil.latest as Util
 from script_importer.myutil.latest import *
 ```
 
-Package statement follows the syntax `script_importer.<name_of_scriptfile>.<version>` (e.g., `script_importer.myutil.latest`). It always have three components, separated by dots.
+Package statement follows the syntax `script_importer.<name_of_scriptfile>.<version>` (e.g., `script_importer.myutil.latest`). It always has three components, separated by dots.
 
-1. `script_importer`. The name of the pacakge, always the same.
+1. `script_importer`. The name of the package.
 2. `<name_of_scriptfile>`. The file name of your script, *no space allowed*. `script_importer` searches in order of specified folders (see the setup guide below), and returns the first result. Try not to have scripts under the same name.
 3. `<version>`. Specify the version of the script to import from. Can be one of
    1. `file`. Import the file on disk just like the standard Python import.
@@ -108,7 +107,7 @@ Package statement follows the syntax `script_importer.<name_of_scriptfile>.<vers
 
 **Setup script folders**
 
-Working like Python imports, `script_importer` searches for the requested script by its file name in the given folders. You can set the folders globally in the environment variable `SCRIPT_IMPORTER_PATH`. For example, we add a folder under C drive named `my scripts`, and another folder named `PythonScripts` under our Documents folder. In all OS systems, you need to separate multiple folders by a `semicolon`. Note that order of folders matters. If you have two script files with the same name, the one appeared first in the folders will be used.
+Working like Python imports, `script_importer` searches for the requested script by its file name in the given folders. You can set the folders globally in the environment variable `SCRIPT_IMPORTER_PATH`. For example, we add a folder under C drive named `my scripts`, and another folder named `PythonScripts` under our Documents folder. In all OS systems, you need to separate multiple folders by a `semicolon`. Note that the order of folders matters. If you have two script files with the same name, the one that appeared first in the folders will be used.
 
 ```cmd
 SCRIPT_IMPORTER_PATH=C:\my scripts;C:\Document\PythonScripts
