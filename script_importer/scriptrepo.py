@@ -18,16 +18,15 @@ class ScriptRepo:
         return True
 
     def logs(self):
+        import re
         cp = subprocess.run(
             ["git", "-C", str(self.repo), "log", "--date=format:%Y%m%d%H%M%S"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         text = cp.stdout.decode("utf8")
-        text = text.split("commit")
+        text = re.split('^commit ', text, flags=re.MULTILINE)
         text = [l.strip() for l in text if l.strip() != ""]
-        import re
-
         logs = [
             re.search("(.*?)\nAuthor: (.*?)\nDate:(.*?)\n\n(.*)", log).groups()
             for log in text
