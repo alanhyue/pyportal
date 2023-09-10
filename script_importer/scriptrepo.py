@@ -1,6 +1,5 @@
 import subprocess
 
-
 class ScriptRepo:
     def __init__(self, path):
         self.repo = path
@@ -65,7 +64,7 @@ class ScriptRepo:
     def run_script_in_commit(self, commit, fpath):
         self.exec_script(self.read_script_in_commit(commit, fpath))
 
-    def read_script_in_commit(self, commit, fpath):
+    def read_binary_file_in_commit(self, commit, fpath):
         # given a commit hash
         cp = subprocess.run(
             ["git", "-C", str(self.repo), "show", commit + ":" + fpath],
@@ -74,7 +73,14 @@ class ScriptRepo:
         )
         if len(cp.stderr) > 0:
             raise ValueError("git show file failed: %s" % cp.stderr)
-        return cp.stdout.decode("utf8")
+        return cp.stdout
+
+    def read_script_in_commit(self, commit, fpath):
+        return self.read_binary_file_in_commit(commit, fpath).decode('utf8')
+
+    def read_file_in_commit(self, commit, fpath):
+        from io import BytesIO
+        return BytesIO(self.read_binary_file_in_commit(commit, fpath))
 
     def pull(self):
         cp = subprocess.run(
@@ -106,7 +112,7 @@ class ScriptRepo:
             commit = self.get_commit_by_date(date)
         else:
             # no version specified, default to the latest version
-            commit = "master"
+            commit = "main"
             print("Reading the bleeding edge version of", fpath)
             info = self.logs()[0]
             print(
@@ -114,3 +120,23 @@ class ScriptRepo:
                 % (info["date"], info["comment"], info["commit"])
             )
         return self.read_script_in_commit(commit, fpath)
+
+    def read_file(
+        self, fpath, comment_kwd=None, comment_exact_match=False, date=None
+    ):
+        if comment_kwd is not None:
+            commit = self.get_commit_by_comment_keyword(
+                comment_kwd, comment_exact_match
+            )
+        elif date is not None:
+            commit = self.get_commit_by_date(date)
+        else:
+            # no version specified, default to the latest version
+            commit = "main"
+            print("Reading the bleeding edge version of", fpath)
+            info = self.logs()[0]
+            print(
+                "date:%s, comment:%s, commit:%s"
+                % (info["date"], info["comment"], info["commit"])
+            )
+        return self.read_file_in_commit(commit, fpath)
