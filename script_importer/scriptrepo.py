@@ -1,5 +1,37 @@
 import subprocess
 
+def run_command(args, cwd=None, encoding="gbk", echo=False, error_ok=False):
+    """Run a command and return its print outs if successful. Otherwise add print outs in exception messages.
+    Print outs are mixed stdout and stderr, just as would be when executed in a console
+    cwd: change working directory before executing the command
+    encoding: encoding of stdout and stderr
+   
+    Example:
+    >>> printouts = run_command(['cmd', '/c', 'dir'], cwd='C:')
+    >>> print(printouts)
+    """
+    import subprocess
+
+    if echo:
+        print("run command:", args)
+
+    cp = subprocess.run(
+        args,
+        cwd=cwd,
+        encoding=encoding,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if echo:
+        print(cp.stdout)
+    if cp.returncode != 0 and not error_ok:
+        msg = (
+            "Error excuting command %s, returncode is %s.\nprint outs (mixed stdout and stderr): \n%s\n"
+            % (cp.args, cp.returncode, cp.stdout)
+        )
+        raise ValueError(msg)
+    return cp.stdout
+
 class ScriptRepo:
     def __init__(self, path):
         self.repo = path
@@ -140,3 +172,18 @@ class ScriptRepo:
                 % (info["date"], info["comment"], info["commit"])
             )
         return self.read_file_in_commit(commit, fpath)
+
+    def file_diff(self, file, commitA, commitB):
+        """
+        if no diff, text is ''
+        
+        for binary files, the text looks like
+        ==========
+        diff --git a/projects/workground/tmp/Reduced indmkt precision Further AND LR3k.joblib b/projects/workground/tmp/Reduced indmkt precision Further AND LR3k.joblib
+        index 1b2ff6e..d0f9315 100644
+        Binary files a/projects/workground/tmp/Reduced indmkt precision Further AND LR3k.joblib and b/projects/workground/tmp/Reduced indmkt precision Further AND LR3k.joblib differ
+        """
+        text = run_command(
+            ["git", "-C", str(self.repo), "diff", f"{commitA}:{file}", f"{commitB}:{file}"],
+        )
+        return text
