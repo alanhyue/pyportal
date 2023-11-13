@@ -86,11 +86,13 @@ def get_version(fname, ver):
 
 
 class ScriptImporter:
-    def __init__(self, code):
+    def __init__(self, code, cache_module=True):
         self.code = code
+        self.cache_module = cache_module
 
     @classmethod
     def find_spec(cls, name, path, target=None):
+        cache_module = True
         if DEBUG and name.startswith(PACKAGE_NAME):
             print(f"name={name} fpath={path} target={target}")
         if name == PACKAGE_NAME:
@@ -113,6 +115,8 @@ class ScriptImporter:
                 # the version part either starts with v or is latest, otherwise the third part is not a version
                 if parts[2].startswith("v") or parts[2] in ("latest", "file"):
                     fname, ver = parts[1], parts[2]
+                    if ver == 'file':
+                        cache_module = False
                     src = get_version(fname, ver)
                 else:
                     raise ValueError(
@@ -125,14 +129,14 @@ class ScriptImporter:
                 raise ValueError(
                     f"the object named '{objname}' is not found in {name}. Does it exist in the specified version of the script?"
                 )
-            return importlib.util.spec_from_loader(name, loader=cls(src))
+            return importlib.util.spec_from_loader(name, loader=cls(src, cache_module))
 
     def create_module(self, spec):
         return None  # use default module creation semantics
 
     def exec_module(self, module):
+        # Execute the module in its namespace
         exec(self.code, module.__dict__)
-        # set the __path__ attribute so the module is regarded as a package
         module.__path__ = "."
 
 
