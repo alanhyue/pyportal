@@ -64,10 +64,10 @@ def get_version(fname, ver):
             sr = None
         if sr is None:
             # script not in a git repo
-            if ver != "latest":
+            if ver != "file":
                 raise ValueError(
                     f"The requested script is not in a git repo,"
-                    " you can ONLY use the latest version. E.g., 'import script_repo.<not_in_a_repo_script>.latest'."
+                    " you can ONLY read the file currently on disk. E.g., 'import script_repo.<not_in_a_repo_script>.file'."
                     f" More information: located script path = '{fin}', requested version: '{ver}'"
                 )
             return fin.read_text(encoding="utf8")
@@ -83,6 +83,12 @@ def get_version(fname, ver):
                 date = ver[1:]
             code = sr.read_script(fpath_relative, date=date)
             return code
+
+
+def ts(fmt="%Y-%m-%d %H%M%S"):
+    from datetime import datetime
+
+    return datetime.now().strftime(fmt)
 
 
 class ScriptImporter:
@@ -115,7 +121,7 @@ class ScriptImporter:
                 # the version part either starts with v or is latest, otherwise the third part is not a version
                 if parts[2].startswith("v") or parts[2] in ("latest", "file"):
                     fname, ver = parts[1], parts[2]
-                    if ver == 'file':
+                    if ver == "file":
                         cache_module = False
                     src = get_version(fname, ver)
                 else:
@@ -132,6 +138,26 @@ class ScriptImporter:
             return importlib.util.spec_from_loader(name, loader=cls(src, cache_module))
 
     def create_module(self, spec):
+        """
+        .file will always reload the module
+
+        To avoid reloading and use the cached module as the first import, use .file_cache
+
+        from script_importer.test_import.file_cache import x
+        """
+        if spec.name.endswith(".file"):
+            tmp_name = spec.name + "_cache"
+            if tmp_name in sys.modules:
+                del sys.modules[tmp_name]
+
+            import types
+
+            spec.name = tmp_name
+            # Create a new module with this random name
+            module = types.ModuleType(spec.name)
+            # Optionally set any other attributes on the module here
+            return module
+
         return None  # use default module creation semantics
 
     def exec_module(self, module):
