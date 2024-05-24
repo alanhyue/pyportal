@@ -119,16 +119,26 @@ class ScriptImporter:
 
             elif len(parts) == 3:
                 # the version part either starts with v or is latest, otherwise the third part is not a version
-                if parts[2].startswith("v") or parts[2] in ("latest", "file"):
+                if parts[2].startswith("v") or parts[2] in (
+                    "latest",
+                    "file",
+                    "file_cache",
+                ):
                     fname, ver = parts[1], parts[2]
                     if ver == "file":
                         cache_module = False
+                    elif ver == "file_cache":
+                        # joblib will pickle objects imported through script_importer.file.file which are
+                        # registered under script_importer.file.file_cache. We reroute these imports to the file
+                        ver = "file"
                     src = get_version(fname, ver)
                 else:
                     raise ValueError(
-                        "No version specified."
-                        " To use the latest (i.e., the currently on disk) version, use 'import script_importer.[fname].latest'"
-                        " If you want to import the version from a specific commit, use 'import script_importer.[fname].v[date]'."
+                        "No version specified when importing "
+                        + str(parts)
+                        + " To use the file currently on disk, use 'import script_importer.[fname].file'"
+                        " To use the version from the latest commit, use 'import script_importer.[fname].latest'"
+                        " To import from a specific commit, use 'import script_importer.[fname].v[date]'."
                     )
             else:
                 objname = parts[-1]
