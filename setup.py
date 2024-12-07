@@ -1,5 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="script_importer", verison="1.0", description="", author="alanhyue",
+    name="script_importer",
+    verison="1.1",
+    description="",
+    author="alanhyue",
 )
