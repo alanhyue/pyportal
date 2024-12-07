@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="script_importer",
-    verison="1.1",
+    version="v1.20241206",
     description="",
     author="alanhyue",
 )
