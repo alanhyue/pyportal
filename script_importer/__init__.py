@@ -100,7 +100,7 @@ class ScriptImporter:
     def find_spec(cls, name, path, target=None):
         cache_module = True
         if DEBUG and name.startswith(PACKAGE_NAME):
-            print(f"name={name} fpath={path} target={target}")
+            print(f"name={name} path={path} target={target}")
         if name == PACKAGE_NAME:
             # handle top level import with an empty module so no exception is raised
             return importlib.util.spec_from_loader(name, loader=cls(""))
@@ -118,9 +118,8 @@ class ScriptImporter:
                 return importlib.util.spec_from_loader(name, loader=cls(""))
 
             elif len(parts) == 3:
-                # the version part either starts with v or is latest, otherwise the third part is not a version
+                # the version part either starts with v or is "file", otherwise the third part is not a version
                 if parts[2].startswith("v") or parts[2] in (
-                    "latest",
                     "file",
                     "file_cache",
                 ):
@@ -137,7 +136,6 @@ class ScriptImporter:
                         "No version specified when importing "
                         + str(parts)
                         + " To use the file currently on disk, use 'import script_importer.[fname].file'"
-                        " To use the version from the latest commit, use 'import script_importer.[fname].latest'"
                         " To import from a specific commit, use 'import script_importer.[fname].v[date]'."
                     )
             else:

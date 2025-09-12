@@ -49,6 +49,7 @@ class ScriptRepo:
         return True
 
     def logs(self):
+        "most recent commit shows up first, descending order in commit date"
         import re
         cp = subprocess.run(
             ["git", "-C", str(self.repo), "log", "--date=format:%Y%m%d%H%M%S"],
@@ -137,22 +138,6 @@ class ScriptRepo:
         self, fpath, comment_kwd=None, comment_exact_match=False, date=None
     ):
         return self.read_file(fpath, comment_kwd, comment_exact_match, date).getvalue().decode('utf8')
-        # if comment_kwd is not None:
-        #     commit = self.get_commit_by_comment_keyword(
-        #         comment_kwd, comment_exact_match
-        #     )
-        # elif date is not None:
-        #     commit = self.get_commit_by_date(date)
-        # else:
-        #     # no version specified, default to the latest version
-        #     commit = "main"
-        #     print("Reading the bleeding edge version of", fpath)
-        #     info = self.logs()[0]
-        #     print(
-        #         "date:%s, comment:%s, commit:%s"
-        #         % (info["date"], info["comment"], info["commit"])
-        #     )
-        # return self.read_script_in_commit(commit, fpath)
 
     def read_file(
         self, fpath, comment_kwd=None, comment_exact_match=False, date=None
