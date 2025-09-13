@@ -1,6 +1,6 @@
 import sys
 import os.path
-
+import pathlib
 import sys, importlib.util
 
 DEBUG = False
@@ -11,23 +11,6 @@ path = os.environ.get("SCRIPT_IMPORTER_PATH", "").split(";")
 # remove empty strings
 path = [s for s in path if s.strip() != ""]
 from pathlib import Path
-
-
-def get_script(fname):
-    if len(path) == 0:
-        raise ValueError(
-            f"No script path configured"
-            ". You can set path globally in the environment variable SCRIPT_IMPORTER_PATH"
-            ", or locally in the variable with script_importer.path.append('script_folder_path')"
-        )
-    for fo in path:
-        p = Path(fo) / (fname + ".py")
-        if p.exists():
-            return p
-    # no script found
-    raise ValueError(
-        f"No script named {fname}.py found. Please make sure the script exists under {path}"
-    )
 
 
 def read_file_text(sr, fname):
@@ -46,43 +29,39 @@ def read_file_text(sr, fname):
     return text
 
 
-def get_script_content(fname):
-    fin = get_script(fname)
-    if fin is not None:
-        return fin.read_text(encoding="utf8")
+def get_script_content(fin):
+    return fin.read_text(encoding="utf8")
 
 
-def get_version(fname, ver):
-    fin = get_script(fname)
-    if fin is not None:
-        from .scriptrepo import ScriptRepo
-        from pathlib import Path
+def get_version(script_path, ver):
+    from .scriptrepo import ScriptRepo
+    from pathlib import Path
 
-        try:
-            sr = ScriptRepo(Path(fin).parent)
-        except ValueError:
-            sr = None
-        if sr is None:
-            # script not in a git repo
-            if ver != "file":
-                raise ValueError(
-                    f"The requested script is not in a git repo,"
-                    " you can ONLY read the file currently on disk. E.g., 'import script_repo.<not_in_a_repo_script>.file'."
-                    f" More information: located script path = '{fin}', requested version: '{ver}'"
-                )
-            return fin.read_text(encoding="utf8")
+    try:
+        sr = ScriptRepo(Path(script_path).parent)
+    except ValueError:
+        sr = None
+    if sr is None:
+        # script not in a git repo
+        if ver != "file":
+            raise ValueError(
+                f"The requested script is not in a git repo,"
+                " you can ONLY read the file currently on disk. E.g., 'import script_repo.<not_in_a_repo_script>.file'."
+                f" More information: located script path = '{script_path}', requested version: '{ver}'"
+            )
+        return script_path.read_text(encoding="utf8")
+    else:
+        # script is in a git repo
+        fpath_relative = "./" + script_path.stem + ".py"
+        if ver == "file":
+            return read_file_text(sr, fpath_relative)
+        elif ver == "latest":
+            date = None
         else:
-            # script is in a git repo
-            fpath_relative = "./" + fin.stem + ".py"
-            if ver == "file":
-                return read_file_text(sr, fpath_relative)
-            elif ver == "latest":
-                date = None
-            else:
-                # ver is like "v123", get the "123" part after "v"
-                date = ver[1:]
-            code = sr.read_script(fpath_relative, date=date)
-            return code
+            # ver is like "v123", get the "123" part after "v"
+            date = ver[1:]
+        code = sr.read_script(fpath_relative, date=date)
+        return code
 
 
 def ts(fmt="%Y-%m-%d %H%M%S"):
@@ -97,53 +76,84 @@ class ScriptImporter:
         self.cache_module = cache_module
 
     @classmethod
-    def find_spec(cls, name, path, target=None):
+    def find_spec(cls, name, module_path, target=None):
+        global path
         cache_module = True
         if DEBUG and name.startswith(PACKAGE_NAME):
-            print(f"name={name} path={path} target={target}")
+            print(f"name={name} module_path={module_path} target={target}")
         if name == PACKAGE_NAME:
             # handle top level import with an empty module so no exception is raised
             return importlib.util.spec_from_loader(name, loader=cls(""))
         if not name.startswith(PACKAGE_NAME + "."):
-            # not our thing, delegate to other importers
+            # not our thing, hand over to other importers
             return None
-        else:
-            parts = name.split(".")
-            if len(parts) == 1:
-                raise ImportError(
-                    f"You must specify a script name, such as 'import {PACKAGE_NAME}.utils'"
-                )
-            elif len(parts) == 2:
-                # no version specified, use the latest version
-                return importlib.util.spec_from_loader(name, loader=cls(""))
+        parts = name.split(".")
+        if len(parts) == 1:
+            raise ImportError(
+                f"You must specify a script name, such as 'import {PACKAGE_NAME}.utils'"
+            )
+        elif len(parts) == 2:
+            # no version specified, use the latest version
+            return importlib.util.spec_from_loader(name, loader=cls(""))
 
-            elif len(parts) == 3:
-                # the version part either starts with v or is "file", otherwise the third part is not a version
-                if parts[2].startswith("v") or parts[2] in (
-                    "file",
-                    "file_cache",
-                ):
-                    fname, ver = parts[1], parts[2]
-                    if ver == "file":
-                        cache_module = False
-                    elif ver == "file_cache":
-                        # joblib will pickle objects imported through script_importer.file.file which are
-                        # registered under script_importer.file.file_cache. We reroute these imports to the file
-                        ver = "file"
-                    src = get_version(fname, ver)
-                else:
-                    raise ValueError(
-                        "No version specified when importing "
-                        + str(parts)
-                        + " To use the file currently on disk, use 'import script_importer.[fname].file'"
-                        " To import from a specific commit, use 'import script_importer.[fname].v[date]'."
-                    )
-            else:
-                objname = parts[-1]
-                raise ValueError(
-                    f"the object named '{objname}' is not found in {name}. Does it exist in the specified version of the script?"
-                )
-            return importlib.util.spec_from_loader(name, loader=cls(src, cache_module))
+        sub_parts = parts[1:]  # skip PACKAGE_NAME
+        # if last part is 'file or version', treat as the target script file
+        if sub_parts[-1] == "file" or sub_parts[-1].startswith('v'):
+            version = sub_parts[-1]
+            script_parts = sub_parts[:-1]  # all parts before 'file'
+            # try to find the file on disk in any root path
+            script_file = None
+            for root in path:
+                candidate_folder = pathlib.Path(root).joinpath(*script_parts)
+                init_file = candidate_folder / '__init__.py'
+                if candidate_folder.is_dir() and init_file.is_file():
+                    # import the package
+                    code = get_version(init_file, version)
+                    return importlib.util.spec_from_file_location(
+                                name,
+                                str(init_file),
+                                loader=cls(code, cache_module),
+                                submodule_search_locations=[str(candidate_folder)],  # ← marks as package
+                            )
+                candidate_file = pathlib.Path(root).joinpath(*script_parts).with_suffix(".py")
+                if candidate_file.is_file():
+                    script_file = candidate_file
+                    break
+            if script_file is None:
+                raise ImportError(f"Script {'.'.join(script_parts)} not found under {path}")
+
+            code = get_version(script_file, version)
+            # return importlib.machinery.ModuleSpec(name, loader=cls(code, cache_module))
+            return importlib.util.spec_from_loader(name, 
+                                                   loader=cls(code, cache_module),
+                                                   )
+        # if len(parts) == 3:
+        #     # the version part either starts with v or is "file", otherwise the third part is not a version
+        #     if parts[2].startswith("v") or parts[2] in (
+        #         "file",
+        #         "file_cache",
+        #     ):
+        #         fname, ver = parts[1], parts[2]
+        #         if ver == "file":
+        #             cache_module = False
+        #         elif ver == "file_cache":
+        #             # joblib will pickle objects imported through script_importer.file.file which are
+        #             # registered under script_importer.file.file_cache. We reroute these imports to the file
+        #             ver = "file"
+        #         src = get_version(fname, ver)
+        #     else:
+        #         raise ValueError(
+        #             "No version specified when importing "
+        #             + str(parts)
+        #             + " To use the file currently on disk, use 'import script_importer.[fname].file'"
+        #             " To import from a specific commit, use 'import script_importer.[fname].v[date]'."
+        #         )
+        # else:
+        #     objname = parts[-1]
+        #     raise ValueError(
+        #         f"the object named '{objname}' is not found in {name}. Does it exist in the specified version of the script?"
+        #     )
+        return importlib.util.spec_from_loader(name, loader=cls("", cache_module))
 
     def create_module(self, spec):
         """

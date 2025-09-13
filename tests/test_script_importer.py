@@ -136,15 +136,32 @@ def multi_script_dir(tmp_path):
         )
     )
 
-    return root, sub1, sub2
+    sub3 = root / "sub3"
+    sub3.mkdir()
+    (sub3 / "__init__.py").write_text(
+        textwrap.dedent(
+            """\
+            from .foo import bar as mybar
+            """
+        )
+    )
+    (sub3 / "foo.py").write_text(
+        textwrap.dedent(
+            """\
+            def bar():
+                return "hello from sub3"
+            """
+        )
+    )
+
+    return root, sub1, sub2, sub3
 
 def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     import importlib
-    script_dir, sub1, sub2 = multi_script_dir
+    script_dir, sub1, sub2, sub3 = multi_script_dir
 
     import script_importer
 
-    monkeypatch.setattr(script_importer, "DEBUG", True)
     # the first matching script will be used
     monkeypatch.setattr(script_importer, "path", [str(sub1), str(sub2)])
     foo_module = importlib.import_module("script_importer.foo.file")
@@ -158,7 +175,24 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     assert foo_module.bar() == "hello from sub2"
 
     # set to parent folder
+    monkeypatch.setattr(script_importer, "DEBUG", True)
     monkeypatch.setattr(script_importer, "path", [str(script_dir)])
+    foo_module = importlib.import_module("script_importer.sub1.foo.file")
+    assert hasattr(foo_module, "bar")
+    assert foo_module.bar() == "hello from sub1"
     foo_module = importlib.import_module("script_importer.sub2.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub2"
+
+    # import sub3 as a package (it has __init__.py)
+    monkeypatch.setattr(script_importer, "path", [str(script_dir)])
+    foo_module = importlib.import_module("script_importer.sub3.file")
+    assert hasattr(foo_module, "mybar")
+    assert not hasattr(foo_module, "bar")
+    assert foo_module.mybar() == "hello from sub3"
+
+    # import a specifc module inside sub3
+    foo_module = importlib.import_module("script_importer.sub3.foo.file")
+    assert not hasattr(foo_module, "mybar")
+    assert hasattr(foo_module, "bar")
+    assert foo_module.bar() == "hello from sub3"
