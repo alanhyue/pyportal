@@ -64,11 +64,11 @@ def test_imports_from_git_repo(git_script_dir, monkeypatch):
 
     import pyportal
 
-    # point script_importer at tmp folder
+    # point pyportal at tmp folder
     monkeypatch.setattr(pyportal, "path", [str(git_script_dir)])
 
     # import from file on disk
-    foo_module = importlib.import_module("script_importer.foo.file")
+    foo_module = importlib.import_module("pyportal.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "version 3"
     assert not hasattr(foo_module, "notdefined")
@@ -82,7 +82,7 @@ def test_imports_from_git_repo(git_script_dir, monkeypatch):
     for i, cmt in enumerate(commits):
         date = cmt['date']
         print('read commit from date', date)
-        foo_module = importlib.import_module(f"script_importer.foo.v{date}")
+        foo_module = importlib.import_module(f"pyportal.foo.v{date}")
         assert hasattr(foo_module, "bar")
         assert foo_module.bar() == f"version {i+1}"
         assert not hasattr(foo_module, "notdefined")
@@ -94,11 +94,11 @@ def test_import_from_file_outside_a_repo(script_dir, monkeypatch):
 
     import pyportal
 
-    # point script_importer at tmp folder
+    # point pyportal at tmp folder
     monkeypatch.setattr(pyportal, "path", [str(script_dir)])
 
     # now dynamically import foo
-    foo_module = importlib.import_module("script_importer.foo.file")
+    foo_module = importlib.import_module("pyportal.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "version 1"
 
@@ -109,7 +109,7 @@ def test_import_from_file_outside_a_repo(script_dir, monkeypatch):
 def multi_script_dir(tmp_path):
     """
     Create two subfolders, each with foo.py, but different implementations.
-    This tests whether script_importer can distinguish between them.
+    This tests whether pyportal can distinguish between them.
     """
     root = tmp_path / "myscripts"
     root.mkdir()
@@ -164,35 +164,35 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
 
     # the first matching script will be used
     monkeypatch.setattr(pyportal, "path", [str(sub1), str(sub2)])
-    foo_module = importlib.import_module("script_importer.foo.file")
+    foo_module = importlib.import_module("pyportal.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub1"
 
     # try sub2 first
     monkeypatch.setattr(pyportal, "path", [str(sub2), str(sub1)])
-    foo_module = importlib.import_module("script_importer.foo.file")
+    foo_module = importlib.import_module("pyportal.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub2"
 
     # set to parent folder
     monkeypatch.setattr(pyportal, "DEBUG", True)
     monkeypatch.setattr(pyportal, "path", [str(script_dir)])
-    foo_module = importlib.import_module("script_importer.sub1.foo.file")
+    foo_module = importlib.import_module("pyportal.sub1.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub1"
-    foo_module = importlib.import_module("script_importer.sub2.foo.file")
+    foo_module = importlib.import_module("pyportal.sub2.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub2"
 
     # import sub3 as a package (it has __init__.py)
     monkeypatch.setattr(pyportal, "path", [str(script_dir)])
-    foo_module = importlib.import_module("script_importer.sub3.file")
+    foo_module = importlib.import_module("pyportal.sub3.file")
     assert hasattr(foo_module, "mybar")
     assert not hasattr(foo_module, "bar")
     assert foo_module.mybar() == "hello from sub3"
 
     # import a specifc module inside sub3
-    foo_module = importlib.import_module("script_importer.sub3.foo.file")
+    foo_module = importlib.import_module("pyportal.sub3.foo.file")
     assert not hasattr(foo_module, "mybar")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub3"

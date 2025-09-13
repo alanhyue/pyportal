@@ -4,10 +4,10 @@ import pathlib
 import sys, importlib.util
 
 DEBUG = False
-PACKAGE_NAME = "script_importer"
+PACKAGE_NAME = "pyportal"
 import os
 
-path = os.environ.get("SCRIPT_IMPORTER_PATH", "").split(";")
+path = os.environ.get("PYPORTAL_PATH", "").split(";")
 # remove empty strings
 path = [s for s in path if s.strip() != ""]
 from pathlib import Path
@@ -127,32 +127,6 @@ class ScriptImporter:
             return importlib.util.spec_from_loader(name, 
                                                    loader=cls(code, cache_module),
                                                    )
-        # if len(parts) == 3:
-        #     # the version part either starts with v or is "file", otherwise the third part is not a version
-        #     if parts[2].startswith("v") or parts[2] in (
-        #         "file",
-        #         "file_cache",
-        #     ):
-        #         fname, ver = parts[1], parts[2]
-        #         if ver == "file":
-        #             cache_module = False
-        #         elif ver == "file_cache":
-        #             # joblib will pickle objects imported through script_importer.file.file which are
-        #             # registered under script_importer.file.file_cache. We reroute these imports to the file
-        #             ver = "file"
-        #         src = get_version(fname, ver)
-        #     else:
-        #         raise ValueError(
-        #             "No version specified when importing "
-        #             + str(parts)
-        #             + " To use the file currently on disk, use 'import script_importer.[fname].file'"
-        #             " To import from a specific commit, use 'import script_importer.[fname].v[date]'."
-        #         )
-        # else:
-        #     objname = parts[-1]
-        #     raise ValueError(
-        #         f"the object named '{objname}' is not found in {name}. Does it exist in the specified version of the script?"
-        #     )
         return importlib.util.spec_from_loader(name, loader=cls("", cache_module))
 
     def create_module(self, spec):
@@ -161,7 +135,7 @@ class ScriptImporter:
 
         To avoid reloading and use the cached module as the first import, use .file_cache
 
-        from script_importer.test_import.file_cache import x
+        from pyportal.test_import.file_cache import x
         """
         if spec.name.endswith(".file"):
             tmp_name = spec.name + "_cache"
