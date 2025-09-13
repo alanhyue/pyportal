@@ -1,8 +1,8 @@
 from setuptools import setup
 
 setup(
-    name="script_importer",
-    version="v1.20241206",
+    name="pyportal",
+    version="v1.0",
     description="",
     author="alanhyue",
 )

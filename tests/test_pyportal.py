@@ -62,10 +62,10 @@ def git_script_dir(script_dir):
 def test_imports_from_git_repo(git_script_dir, monkeypatch):
     import importlib
 
-    import script_importer
+    import pyportal
 
     # point script_importer at tmp folder
-    monkeypatch.setattr(script_importer, "path", [str(git_script_dir)])
+    monkeypatch.setattr(pyportal, "path", [str(git_script_dir)])
 
     # import from file on disk
     foo_module = importlib.import_module("script_importer.foo.file")
@@ -73,7 +73,7 @@ def test_imports_from_git_repo(git_script_dir, monkeypatch):
     assert foo_module.bar() == "version 3"
     assert not hasattr(foo_module, "notdefined")
 
-    from script_importer.scriptrepo import ScriptRepo
+    from pyportal.scriptrepo import ScriptRepo
 
     repo = ScriptRepo(git_script_dir)
     commits = repo.logs()[::-1] # .logs() returns the most recent commits first, reverse so it's in ascending order
@@ -92,10 +92,10 @@ def test_imports_from_git_repo(git_script_dir, monkeypatch):
 def test_import_from_file_outside_a_repo(script_dir, monkeypatch):
     import importlib
 
-    import script_importer
+    import pyportal
 
     # point script_importer at tmp folder
-    monkeypatch.setattr(script_importer, "path", [str(script_dir)])
+    monkeypatch.setattr(pyportal, "path", [str(script_dir)])
 
     # now dynamically import foo
     foo_module = importlib.import_module("script_importer.foo.file")
@@ -160,23 +160,23 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     import importlib
     script_dir, sub1, sub2, sub3 = multi_script_dir
 
-    import script_importer
+    import pyportal
 
     # the first matching script will be used
-    monkeypatch.setattr(script_importer, "path", [str(sub1), str(sub2)])
+    monkeypatch.setattr(pyportal, "path", [str(sub1), str(sub2)])
     foo_module = importlib.import_module("script_importer.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub1"
 
     # try sub2 first
-    monkeypatch.setattr(script_importer, "path", [str(sub2), str(sub1)])
+    monkeypatch.setattr(pyportal, "path", [str(sub2), str(sub1)])
     foo_module = importlib.import_module("script_importer.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub2"
 
     # set to parent folder
-    monkeypatch.setattr(script_importer, "DEBUG", True)
-    monkeypatch.setattr(script_importer, "path", [str(script_dir)])
+    monkeypatch.setattr(pyportal, "DEBUG", True)
+    monkeypatch.setattr(pyportal, "path", [str(script_dir)])
     foo_module = importlib.import_module("script_importer.sub1.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub1"
@@ -185,7 +185,7 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     assert foo_module.bar() == "hello from sub2"
 
     # import sub3 as a package (it has __init__.py)
-    monkeypatch.setattr(script_importer, "path", [str(script_dir)])
+    monkeypatch.setattr(pyportal, "path", [str(script_dir)])
     foo_module = importlib.import_module("script_importer.sub3.file")
     assert hasattr(foo_module, "mybar")
     assert not hasattr(foo_module, "bar")
