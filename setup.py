@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pyportal",
-    version="1.0.0",
+    version="1.0.1",
     description="Import Python script from any directory or git commit history.",
     long_description=long_description,
     long_description_content_type="text/markdown",
