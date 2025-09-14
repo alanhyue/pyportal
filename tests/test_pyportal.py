@@ -196,3 +196,14 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     assert not hasattr(foo_module, "mybar")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub3"
+
+def test_get_path_from_environ(monkeypatch):
+    import pyportal
+
+    monkeypatch.setenv("PYPORTAL_PATH", "mydir1;mydir2")
+
+    # reload module so it picks up the patched env var
+    import importlib
+    importlib.reload(pyportal)
+
+    assert pyportal.path == ['mydir1', 'mydir2']
