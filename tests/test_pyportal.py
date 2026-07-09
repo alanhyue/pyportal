@@ -3,6 +3,7 @@ import textwrap
 import pytest
 import time
 
+
 @pytest.fixture
 def script_dir(tmp_path):
     """Create a tmp folder with a foo.py script (no git)."""
@@ -20,20 +21,21 @@ def script_dir(tmp_path):
     )
     return repo_dir
 
+
 def git_init(folder):
-    subprocess.run(["git", "init"], cwd=folder, check=True)
+    subprocess.run(["git", "init", "-b", "main"], cwd=folder, check=True)
+
 
 def commit_changes(folder, msg="default commit message"):
     subprocess.run(["git", "add", "foo.py"], cwd=folder, check=True)
-    subprocess.run(
-        ["git", "commit", "-m", msg], cwd=folder, check=True
-    )
+    subprocess.run(["git", "commit", "-m", msg], cwd=folder, check=True)
+
 
 @pytest.fixture
 def git_script_dir(script_dir):
     """Turn the script_dir into a git repo and commit the file."""
     git_init(script_dir)
-    commit_changes(script_dir, 'committing version 1')
+    commit_changes(script_dir, "committing version 1")
     # must sleep because commits are distinguished by timestamps down to SECONDS
     time.sleep(2)
     # second commit
@@ -46,7 +48,7 @@ def git_script_dir(script_dir):
             """
         )
     )
-    commit_changes(script_dir, 'committing version 2')
+    commit_changes(script_dir, "committing version 2")
     # uncommitted changes
     foo_py.write_text(
         textwrap.dedent(
@@ -57,6 +59,85 @@ def git_script_dir(script_dir):
         )
     )
     return script_dir
+
+
+@pytest.fixture
+def git_merge_script_dir(tmp_path):
+    """
+    Create a git repo containing a merge commit.
+
+    History:
+
+          B1
+         /
+    A1--A2--M
+         \ /
+          B1
+
+    M is a merge commit with two parents.
+    """
+    repo_dir = tmp_path / "merge_repo"
+    repo_dir.mkdir()
+
+    foo_py = repo_dir / "foo.py"
+
+    foo_py.write_text(
+        textwrap.dedent(
+            """\
+            def bar():
+                return "version 1"
+            """
+        )
+    )
+
+    git_init(repo_dir)
+    commit_changes(repo_dir, "initial commit")
+
+    # main second commit
+    time.sleep(1)
+    foo_py.write_text(
+        textwrap.dedent(
+            """\
+            def bar():
+                return "main version"
+            """
+        )
+    )
+    commit_changes(repo_dir, "main commit")
+
+    # create branch from current main
+    subprocess.run(
+        ["git", "checkout", "-b", "feature"],
+        cwd=repo_dir,
+        check=True,
+    )
+
+    time.sleep(1)
+    foo_py.write_text(
+        textwrap.dedent(
+            """\
+            def bar():
+                return "feature version"
+            """
+        )
+    )
+    commit_changes(repo_dir, "feature commit")
+
+    # go back to main
+    subprocess.run(
+        ["git", "checkout", "main"],
+        cwd=repo_dir,
+        check=True,
+    )
+
+    # create a merge commit
+    subprocess.run(
+        ["git", "merge", "--no-ff", "feature", "-m", "merge feature"],
+        cwd=repo_dir,
+        check=True,
+    )
+
+    return repo_dir
 
 
 def test_imports_from_git_repo(git_script_dir, monkeypatch):
@@ -76,17 +157,18 @@ def test_imports_from_git_repo(git_script_dir, monkeypatch):
     from pyportal.scriptrepo import ScriptRepo
 
     repo = ScriptRepo(git_script_dir)
-    commits = repo.logs()[::-1] # .logs() returns the most recent commits first, reverse so it's in ascending order
+    commits = repo.logs()[
+        ::-1
+    ]  # .logs() returns the most recent commits first, reverse so it's in ascending order
     print("all commits")
     print(commits)
     for i, cmt in enumerate(commits):
-        date = cmt['date']
-        print('read commit from date', date)
+        date = cmt["date"]
+        print("read commit from date", date)
         foo_module = importlib.import_module(f"pyportal.foo.v{date}")
         assert hasattr(foo_module, "bar")
         assert foo_module.bar() == f"version {i+1}"
         assert not hasattr(foo_module, "notdefined")
-
 
 
 def test_import_from_file_outside_a_repo(script_dir, monkeypatch):
@@ -101,8 +183,6 @@ def test_import_from_file_outside_a_repo(script_dir, monkeypatch):
     foo_module = importlib.import_module("pyportal.foo.file")
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "version 1"
-
-
 
 
 @pytest.fixture
@@ -156,8 +236,10 @@ def multi_script_dir(tmp_path):
 
     return root, sub1, sub2, sub3
 
+
 def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     import importlib
+
     script_dir, sub1, sub2, sub3 = multi_script_dir
 
     import pyportal
@@ -197,6 +279,7 @@ def test_same_name_from_different_folders(multi_script_dir, monkeypatch):
     assert hasattr(foo_module, "bar")
     assert foo_module.bar() == "hello from sub3"
 
+
 def test_get_path_from_environ(monkeypatch):
     import pyportal
 
@@ -204,6 +287,39 @@ def test_get_path_from_environ(monkeypatch):
 
     # reload module so it picks up the patched env var
     import importlib
+
     importlib.reload(pyportal)
 
-    assert pyportal.path == ['mydir1', 'mydir2']
+    assert pyportal.path == ["mydir1", "mydir2"]
+
+
+def test_import_from_merge_commit(git_merge_script_dir, monkeypatch):
+    import importlib
+
+    import pyportal
+
+    monkeypatch.setattr(pyportal, "path", [str(git_merge_script_dir)])
+
+    from pyportal.scriptrepo import ScriptRepo
+
+    repo = ScriptRepo(git_merge_script_dir)
+
+    commits = repo.logs()[::-1]
+
+    print("merge history:")
+    for cmt in commits:
+        print(cmt)
+
+    # Ensure merge commit exists
+    merge_commits = [c for c in commits if c["comment"].startswith("merge")]
+
+    assert len(merge_commits) == 1
+
+    # The latest state should be importable
+    foo_module = importlib.import_module("pyportal.foo.file")
+
+    assert hasattr(foo_module, "bar")
+    assert foo_module.bar() in [
+        "main version",
+        "feature version",
+    ]
