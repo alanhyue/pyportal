@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pyportal",
-    version="1.0.1",
+    version="1.0.2",
     description="Import Python script from any directory or git commit history.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -14,10 +14,8 @@ setup(
     author_email="alanyue@example.com",  # Placeholder email - replace with actual email
     url="https://github.com/alanyue/pyportal",  # Placeholder URL - replace with actual repo
     license="MIT",
-
     # Automatically find packages
     packages=find_packages(),
-
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
